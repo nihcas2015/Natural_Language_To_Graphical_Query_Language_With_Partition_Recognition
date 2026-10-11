@@ -1,0 +1,124 @@
+version: '3.8'
+
+# ==============================================================================
+# Partition-Aware Text2GQL: Distributed Database Infrastructure
+# Supports two distributed graph profiles matching the research plan & patent:
+# Profile 1: Neo4j Fabric (1 Coordinator + 4 Physical Shards)
+# Profile 2: JanusGraph + Apache Cassandra (4 Cassandra Shard Nodes)
+# ==============================================================================
+
+networks:
+  graph-cluster-net:
+    driver: bridge
+
+services:
+  # ----------------------------------------------------------------------------
+  # PROFILE 1: NEO4J FABRIC (Default Distributed openCypher Backend)
+  # ----------------------------------------------------------------------------
+  neo4j-coordinator:
+    image: neo4j:5.20.0-enterprise
+    container_name: neo4j-coordinator
+    profiles: ["fabric", "all"]
+    networks:
+      - graph-cluster-net
+    ports:
+      - "7474:7474"   # HTTP Browser
+      - "7687:7687"   # Bolt Coordinator Port
+    environment:
+      - NEO4J_AUTH=neo4j/password123
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_dbms_security_auth__enabled=true
+      - NEO4J_fabric_enabled=true
+    volumes:
+      - ./fabric_init.cypher:/var/lib/neo4j/import/fabric_init.cypher
+
+  neo4j-shard-0:
+    image: neo4j:5.20.0-community
+    container_name: neo4j-shard-0
+    profiles: ["fabric", "all"]
+    networks:
+      - graph-cluster-net
+    ports:
+      - "7688:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/password123
+      - NEO4J_dbms_default__database=shard0
+
+  neo4j-shard-1:
+    image: neo4j:5.20.0-community
+    container_name: neo4j-shard-1
+    profiles: ["fabric", "all"]
+    networks:
+      - graph-cluster-net
+    ports:
+      - "7689:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/password123
+      - NEO4J_dbms_default__database=shard1
+
+  neo4j-shard-2:
+    image: neo4j:5.20.0-community
+    container_name: neo4j-shard-2
+    profiles: ["fabric", "all"]
+    networks:
+      - graph-cluster-net
+    ports:
+      - "7690:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/password123
+      - NEO4J_dbms_default__database=shard2
+
+  neo4j-shard-3:
+    image: neo4j:5.20.0-community
+    container_name: neo4j-shard-3
+    profiles: ["fabric", "all"]
+    networks:
+      - graph-cluster-net
+    ports:
+      - "7691:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/password123
+      - NEO4J_dbms_default__database=shard3
+
+  # ----------------------------------------------------------------------------
+  # PROFILE 2: JANUSGRAPH + APACHE CASSANDRA (Alternative High-Scale Substrate)
+  # ----------------------------------------------------------------------------
+  cassandra-node-0:
+    image: cassandra:4.1
+    container_name: cassandra-node-0
+    profiles: ["janusgraph"]
+    networks:
+      - graph-cluster-net
+    environment:
+      - CASSANDRA_CLUSTER_NAME=Text2GQLCluster
+      - CASSANDRA_DC=datacenter1
+
+  cassandra-node-1:
+    image: cassandra:4.1
+    container_name: cassandra-node-1
+    profiles: ["janusgraph"]
+    networks:
+      - graph-cluster-net
+    environment:
+      - CASSANDRA_CLUSTER_NAME=Text2GQLCluster
+      - CASSANDRA_SEEDS=cassandra-node-0
+    depends_on:
+      - cassandra-node-0
+
+  janusgraph:
+    image: janusgraph/janusgraph:latest
+    container_name: janusgraph-server
+    profiles: ["janusgraph"]
+    networks:
+      - graph-cluster-net
+    ports:
+      - "8182:8182"  # Gremlin Server Port
+    environment:
+      - JANUS_PROPS_TEMPLATE=cql
+      - janusgraph.storage.backend=cql
+      - janusgraph.storage.hostname=cassandra-node-0
+      - janusgraph.storage.cql.keyspace=janusgraph
+    depends_on:
+      - cassandra-node-0
+      - cassandra-node-1
+

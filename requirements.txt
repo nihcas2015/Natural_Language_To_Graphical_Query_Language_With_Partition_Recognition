@@ -1,0 +1,22 @@
+# Core dependencies
+# Partition-Aware Text-to-GQL Complete Dependencies
+networkx>=3.0
+pydantic>=2.0
+pytest>=8.0
+fastapi>=0.110.0
+uvicorn>=0.28.0
+huggingface_hub>=0.20.0
+pyarrow>=14.0.0
+lightgbm>=4.0.0
+
+# Neural Training & Inference (Kaggle & Optional Local GPU)
+torch>=2.1.0
+transformers>=4.38.0
+sentence-transformers>=2.5.0
+peft>=0.9.0
+bitsandbytes>=0.42.0
+accelerate>=0.27.0
+faiss-cpu>=1.7.4
+
+# Graph Database Client (Distributed Hardware Cluster)
+neo4j>=5.15.0
